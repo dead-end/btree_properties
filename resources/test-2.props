@@ -1,0 +1,19 @@
+
+############################
+# comment
+############################
+
+db.1.db=db-1
+db.1.user=user-1
+db.1.password=password-1
+db.1.connection=localhost:5432
+
+db.2.db=db-2
+db.2.user=user-2
+db.2.password=password-2
+db.2.connection=localhost:5432
+
+db.3.db=db-3
+db.3.user=user-3
+db.3.password=password-3
+db.3.connection=localhost:5432
