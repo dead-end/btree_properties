@@ -34,6 +34,11 @@
 
 #define MAX_LINE 1024
 
+//
+// a pointer to the callback function
+//
+static void (*stored_callback)(const char *key, const char *value);
+
 /***************************************************************************
  * An entry consists of a string key and a string value.
  **************************************************************************/
@@ -102,9 +107,7 @@ static void delete_entry(void *ptr) {
 
 	Entry *entry = (Entry *) ptr;
 
-	print_debug("delete_entry() key: '%s' value: '%s'\n",
-			entry->key,
-			entry->value);
+	print_debug("delete_entry() key: '%s' value: '%s'\n", entry->key, entry->value);
 
 	//
 	// free the duplicated key and value and the entry struct
@@ -120,9 +123,7 @@ static void delete_entry(void *ptr) {
  **************************************************************************/
 
 static void replace_entry_value(Entry *entry, const char *new_value) {
-	print_debug(
-			"replace_entry_value() Replace key: '%s' old value: '%s' new value: '%s'\n",
-			entry->key, entry->value, new_value);
+	print_debug("replace_entry_value() Replace key: '%s' old value: '%s' new value: '%s'\n", entry->key, entry->value, new_value);
 
 	free(entry->value);
 	entry->value = strdup(new_value);
@@ -144,11 +145,7 @@ static int compare_entries(const void *ptr1, const void *ptr2) {
 	const Entry *entry1 = (const Entry *) ptr1;
 	const Entry *entry2 = (const Entry *) ptr2;
 
-	print_debug("compare_entries() key1: '%s' value1: '%s' key2: '%s' value2: '%s'\n",
-			entry1->key,
-			entry1->value,
-			entry2->key,
-			entry2->value);
+	print_debug("compare_entries() key1: '%s' value1: '%s' key2: '%s' value2: '%s'\n", entry1->key, entry1->value, entry2->key, entry2->value);
 
 	return strcmp(entry1->key, entry2->key);
 }
@@ -189,34 +186,44 @@ int btp_get_num_entries(BTP_ctx *ctx) {
 }
 
 /***************************************************************************
- * The function is a callback handler that prints an entry.
+ * The function is a callback handler for the twalk function. It calls the
+ * btp_callback function. As a consequence it is an adapter.
  **************************************************************************/
 
-static void print_action(const void *nodep, const VISIT which, const int depth) {
+static void iterator(const void *nodep, const VISIT which, const int depth) {
 
 	if (which == leaf || which == preorder) {
 		const Entry *entry = *(const Entry **) nodep;
 
-		printf("print_action() Depth: %d key: '%s' value: '%s'\n", depth,
+		print_debug("iterator() Depth: %d key: '%s' value: '%s'\n", depth,
 				entry->key, entry->value);
+
+		stored_callback(entry->key, entry->value);
 	}
 }
 
 /***************************************************************************
- * The function prints all entries.
+ * The function set the callback handler of the user to
  **************************************************************************/
-void btp_print_properties(const BTP_ctx *ctx) {
+void btp_iterate_properties(const BTP_ctx *ctx,
+		void (*user_callback)(const char *key, const char *value)) {
 
-	printf("btp_print_properties() Num entries: %d\n", ctx->num_entries);
-	twalk(ctx->root, print_action);
+	stored_callback = user_callback;
+
+	printf("btp_iterate_properties() Num entries: %d\n", ctx->num_entries);
+	twalk(ctx->root, iterator);
+
+	stored_callback = NULL;
 }
 
 /***************************************************************************
  * The function adds a key value pair to the properties, if the key not
- * already exists.
+ * already exists. In this case the method returns true. If the value
+ * exists, the function returns false. If the parameter replace is true, the
+ * value will be replaced. If the value is false, no changes are made.
  **************************************************************************/
 
-void btp_add_property(BTP_ctx *ctx, char *key, const char *value,
+bool btp_add_property(BTP_ctx *ctx, char *key, const char *value,
 		const bool replace) {
 
 	//
@@ -233,25 +240,25 @@ void btp_add_property(BTP_ctx *ctx, char *key, const char *value,
 		// entry with the key found but replace is not allowed => error
 		//
 		if (!replace) {
-			fprintf(stderr,
-					"btp_add_property() Key: '%s' already defined with value: '%s'\n",
-					search_result->key, search_result->value);
-			exit(EXIT_FAILURE);
+			print_debug("btp_add_property() Key: '%s' already defined with value: '%s'\n", search_result->key, search_result->value);
 
 			//
 			// entry with the key found => free old value and duplicate new value
 			//
 		} else {
 			replace_entry_value(search_result, value);
-			return;
 		}
+
+		//
+		// if an entry was found the function returns false (not added, perhaps replaced)
+		//
+		return false;
 	}
 	//
 	// create and add property
 	//
 	const Entry *entry = create_entry(key, value);
-	print_debug("btp_add_property() Created key: '%s' value: '%s'\n", entry->key,
-			entry->value);
+	print_debug("btp_add_property() Created key: '%s' value: '%s'\n", entry->key, entry->value);
 
 #ifdef DEBUG
 	const Entry *add_result = *(Entry **)
@@ -259,8 +266,9 @@ void btp_add_property(BTP_ctx *ctx, char *key, const char *value,
 	tsearch((void *) entry, &(ctx->root), compare_entries);
 	ctx->num_entries++;
 
-	print_debug("btp_add_property() Added key: '%s' value: '%s' num entries: %d\n", add_result->key,
-			add_result->value, ctx->num_entries);
+	print_debug("btp_add_property() Added key: '%s' value: '%s' num entries: %d\n", add_result->key, add_result->value, ctx->num_entries);
+
+	return true;
 }
 
 /***************************************************************************
@@ -281,14 +289,12 @@ bool btp_delete_property(BTP_ctx *ctx, char *key) {
 	// if the entry does not exist there is noting to do
 	//
 	if (ptr == NULL) {
-		print_debug("btp_delete_property() Search key: '%s' does not exist.\n",
-				delete_key.key);
+		print_debug("btp_delete_property() Search key: '%s' does not exist.\n", delete_key.key);
 		return false;
 	}
 
 	Entry *search_result = *(Entry **) ptr;
-	print_debug("btp_delete_property() Key: '%s' with value: '%s'\n",
-			search_result->key, search_result->value);
+	print_debug("btp_delete_property() Key: '%s' with value: '%s'\n", search_result->key, search_result->value);
 
 	//
 	// delete the entry from the btree and free the memory
@@ -297,8 +303,7 @@ bool btp_delete_property(BTP_ctx *ctx, char *key) {
 	delete_entry(search_result);
 	ctx->num_entries--;
 
-	print_debug("btp_delete_property() Entry for key: '%s' deleted and freed. Num entries: %d\n",
-			delete_key.key, ctx->num_entries);
+	print_debug("btp_delete_property() Entry for key: '%s' deleted and freed. Num entries: %d\n", delete_key.key, ctx->num_entries);
 
 	return true;
 }
@@ -340,9 +345,7 @@ void btp_read_properties(BTP_ctx *ctx, const char *filename) {
 
 	file = fopen(filename, "r");
 	if (file == NULL) {
-		fprintf(stderr,
-				"btp_read_properties() Unable to open file: %s! Error: %s\n",
-				filename, strerror(errno));
+		fprintf(stderr, "btp_read_properties() Unable to open file: %s! Error: %s\n", filename, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
@@ -358,20 +361,18 @@ void btp_read_properties(BTP_ctx *ctx, const char *filename) {
 			continue;
 		}
 
-		print_debug("btp_read_properties() File: '%s' no: %d line: '%s'\n",
-				filename, line_no, line);
+		print_debug("btp_read_properties() File: '%s' no: %d line: '%s'\n", filename, line_no, line);
 
 		//
 		// search = as a key / value delimiter
 		//
 		idx = index(line, '=');
 		if (!idx) {
-			fprintf(stderr,
-					"btp_read_properties() File: '%s' line: %d does not contain '='!\n",
-					filename, line_no);
+			fprintf(stderr, "btp_read_properties() File: '%s' line: %d does not contain '='!\n", filename, line_no);
 			fclose(file);
 			exit(EXIT_FAILURE);
 		}
+
 		//
 		// split line by = and get key and value
 		//

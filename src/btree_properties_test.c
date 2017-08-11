@@ -20,16 +20,23 @@
 #define TEST_2_PROPS "resources/test-2.props"
 
 /***************************************************************************
+ * The function is a callback for the iterator function. It simply prints
+ * the key and value.
+ **************************************************************************/
+
+void print_properties(const char *key, const char *value) {
+	printf("Key: '%s' Value: '%s'\n", key, value);
+}
+
+/***************************************************************************
  * The method ensures that two int values are equal.
  **************************************************************************/
 
 void ensure_int(const int expected_value, const int current_value) {
-	printf("Checking int expected: %d current value: %d\n", expected_value,
-			current_value);
+	printf("Checking int expected: %d current value: %d\n", expected_value, current_value);
 
 	if (expected_value != current_value) {
-		fprintf(stderr, "FAILED - Expected value: %d found value: %d\n",
-				expected_value, current_value);
+		fprintf(stderr, "FAILED - Expected value: %d found value: %d\n", expected_value, current_value);
 		exit(EXIT_FAILURE);
 	}
 }
@@ -59,10 +66,7 @@ void ensure(BTP_ctx *ctx, char *key, char* expected_value) {
 	// ensure that the property value is the expected
 	//
 	if (strcmp(expected_value, current_value) != 0) {
-		fprintf(stderr, "FAILED - Key: %s expected value: %s found value: %s\n",
-				key,
-				expected_value,
-				current_value);
+		fprintf(stderr, "FAILED - Key: %s expected value: %s found value: %s\n", key, expected_value, current_value);
 		exit(EXIT_FAILURE);
 	}
 }
@@ -85,7 +89,7 @@ void test_1() {
 	ensure(ctx, "key-3", "value-3");
 	ensure(ctx, "key-4", "value-4");
 
-	btp_print_properties(ctx);
+	btp_iterate_properties(ctx, print_properties);
 
 	btp_destroy_ctx(ctx);
 
@@ -147,9 +151,7 @@ void test_2() {
 
 		if (!ensure_indexed(ctx, "db.%d.db", "db-%d", idx, true)) {
 			if (idx != 4) {
-				fprintf(stderr,
-						"FAILED - Unexpected key for index: %d not found!\n",
-						idx);
+				fprintf(stderr, "FAILED - Unexpected key for index: %d not found!\n", idx);
 				exit(EXIT_FAILURE);
 			}
 			break;
@@ -160,7 +162,7 @@ void test_2() {
 		ensure_indexed(ctx, "db.%d.connection", "localhost:5432", idx, false);
 	}
 
-	btp_print_properties(ctx);
+	btp_iterate_properties(ctx, print_properties);
 
 	btp_destroy_ctx(ctx);
 
@@ -196,7 +198,7 @@ void test_3() {
 	ensure_int(2, btp_get_num_entries(ctx));
 	ensure(ctx, "key-2", "new-new-value-2");
 
-	btp_print_properties(ctx);
+	btp_iterate_properties(ctx, print_properties);
 
 	btp_destroy_ctx(ctx);
 
