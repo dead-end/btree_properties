@@ -23,7 +23,8 @@ int str_has_suffix(const char *str, const char *suffix) {
 }
 
 /***************************************************************************
- * The function sets the tailing whitespaces to '\0'.
+ * The function removes the tailing whitespaces of a string, by setting them
+ * to '\0'.
  **************************************************************************/
 
 char *r_trim(char *str) {

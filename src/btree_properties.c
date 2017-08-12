@@ -23,7 +23,7 @@
 #include "btree_utils.h"
 
 //
-// definition of print_debug macro
+// Definition of the print_debug macro.
 //
 #ifdef DEBUG
 #define DEBUG_OUT stdout
@@ -35,7 +35,7 @@
 #define MAX_LINE 1024
 
 //
-// a pointer to the callback function
+// A pointer to the callback function,which is used by the iterator function.
 //
 static void (*stored_callback)(const char *key, const char *value);
 
@@ -56,16 +56,6 @@ typedef struct Entry {
 static Entry *create_entry(const char *key, const char *value) {
 
 	//
-	// allocate memory for the entry
-	//
-	Entry *entry = malloc(sizeof(Entry));
-
-	if (entry == NULL) {
-		fprintf(stderr, "create_entry() Unable allocate memory!\n");
-		exit(EXIT_FAILURE);
-	}
-
-	//
 	// ensure that the key and the value are not null
 	//
 	if (key == NULL) {
@@ -75,6 +65,16 @@ static Entry *create_entry(const char *key, const char *value) {
 
 	if (value == NULL) {
 		fprintf(stderr, "create_entry() Value is NULL for key: '%s'!\n", key);
+		exit(EXIT_FAILURE);
+	}
+
+	//
+	// allocate memory for the entry
+	//
+	Entry *entry = malloc(sizeof(Entry));
+
+	if (entry == NULL) {
+		fprintf(stderr, "create_entry() Unable allocate memory!\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -96,6 +96,7 @@ static Entry *create_entry(const char *key, const char *value) {
 
 /***************************************************************************
  * The method deleted an entry, which means that the memory has to be freed.
+ * The method is used by the tdestroy function, which expects a void *ptr.
  **************************************************************************/
 
 static void delete_entry(void *ptr) {
@@ -151,7 +152,8 @@ static int compare_entries(const void *ptr1, const void *ptr2) {
 }
 
 /***************************************************************************
- * The method creates a btree context.
+ * The method creates a btree context, which is used to store all the btree
+ * data.
  **************************************************************************/
 BTP_ctx *btp_create_ctx() {
 	BTP_ctx *ctx = malloc(sizeof(BTP_ctx));
@@ -169,7 +171,7 @@ BTP_ctx *btp_create_ctx() {
 }
 
 /***************************************************************************
- * The method destroys a btree context.
+ * The method destroys a btree context and frees all the related memory.
  **************************************************************************/
 void btp_destroy_ctx(BTP_ctx *ctx) {
 	tdestroy(ctx->root, delete_entry);
@@ -203,10 +205,10 @@ static void iterator(const void *nodep, const VISIT which, const int depth) {
 }
 
 /***************************************************************************
- * The function set the callback handler of the user to
+ * The function set the callback handler of the user to the stored_callback
+ * and calls the twalk with the adapter callback function iterator.
  **************************************************************************/
-void btp_iterate_properties(const BTP_ctx *ctx,
-		void (*user_callback)(const char *key, const char *value)) {
+void btp_iterate_properties(const BTP_ctx *ctx, void (*user_callback)(const char *key, const char *value)) {
 
 	stored_callback = user_callback;
 
@@ -223,8 +225,8 @@ void btp_iterate_properties(const BTP_ctx *ctx,
  * value will be replaced. If the value is false, no changes are made.
  **************************************************************************/
 
-bool btp_add_property(BTP_ctx *ctx, char *key, const char *value,
-		const bool replace) {
+bool btp_add_property(BTP_ctx *ctx, char *key, const char *value, const bool replace) {
+	print_debug("btp_add_property() key: '%s' value: '%s' replace: %d \n", key, value, replace);
 
 	//
 	// check if the property already exists

@@ -42,6 +42,19 @@ void ensure_int(const int expected_value, const int current_value) {
 }
 
 /***************************************************************************
+ * The method ensures that two bool values are equal.
+ **************************************************************************/
+
+void ensure_bool(const int expected_value, const int current_value) {
+	printf("Checking bool expected: %d current value: %d\n", expected_value, current_value);
+
+	if (expected_value != current_value) {
+		fprintf(stderr, "FAILED - Expected value: %d found value: %d\n", expected_value, current_value);
+		exit(EXIT_FAILURE);
+	}
+}
+
+/***************************************************************************
  * The method ensures that the btree contains a property with a given value.
  **************************************************************************/
 
@@ -98,11 +111,10 @@ void test_1() {
 
 /***************************************************************************
  * The method ensures that the btree contains a property with a given value.
- * Both, the key and the value can contain an index.
+ * Both, the key and the value can contain an index. Example: "key-%d"
  **************************************************************************/
 
-bool ensure_indexed(BTP_ctx *ctx, const char *key_format,
-		const char *value_format, const int idx, const bool allow_missing) {
+bool ensure_indexed(BTP_ctx *ctx, const char *key_format, const char *value_format, const int idx, const bool allow_missing) {
 	char key[MAX_KEY_VALUE];
 	char value[MAX_KEY_VALUE];
 
@@ -125,8 +137,8 @@ bool ensure_indexed(BTP_ctx *ctx, const char *key_format,
 
 /***************************************************************************
  * The second test reads a property file with a list of database
- * connections. The list ends if the first key (db.<INDEX>.db) with the
- * index was not found. Example:
+ * connections. The list ends if the first key (db.<INDEX>.db) with an index
+ * was not found. Example:
  *
  * db.1.db=db-1
  * db.1.user=user-1
@@ -174,29 +186,66 @@ void test_2() {
  **************************************************************************/
 
 void test_3() {
+	bool result;
 
 	printf("Starting test 3\n");
 
 	BTP_ctx *ctx = btp_create_ctx();
 	ensure_int(0, btp_get_num_entries(ctx));
 
-	btp_add_property(ctx, "key-1", "value-1", false);
+	//
+	// a key / value pair
+	//
+	result = btp_add_property(ctx, "key-1", "value-1", false);
+	ensure_bool(true, result);
 	ensure_int(1, btp_get_num_entries(ctx));
 	ensure(ctx, "key-1", "value-1");
 
-	btp_add_property(ctx, "key-2", "value-2", false);
+	//
+	// an other key / value pair
+	//
+	result = btp_add_property(ctx, "key-2", "value-2", false);
+	ensure_bool(true, result);
 	ensure_int(2, btp_get_num_entries(ctx));
 	ensure(ctx, "key-2", "value-2");
 
-	btp_delete_property(ctx, "key-2");
+	//
+	// delete key / value pair
+	//
+	result = btp_delete_property(ctx, "key-2");
+	ensure_bool(true, result);
 	ensure_int(1, btp_get_num_entries(ctx));
-	btp_add_property(ctx, "key-2", "new-value-2", false);
+
+	//
+	// delete same key / value pair again. This returns false.
+	//
+	result = btp_delete_property(ctx, "key-2");
+	ensure_bool(false, result);
+	ensure_int(1, btp_get_num_entries(ctx));
+
+	//
+	// add same key / value pair again
+	//
+	result = btp_add_property(ctx, "key-2", "new-value-2", false);
+	ensure_bool(true, result);
 	ensure_int(2, btp_get_num_entries(ctx));
 	ensure(ctx, "key-2", "new-value-2");
 
-	btp_add_property(ctx, "key-2", "new-new-value-2", true);
+	//
+	// add same key with a new value again. The replace flag is false, so so nothing will happen.
+	//
+	result = btp_add_property(ctx, "key-2", "add-new-value-2", false);
+	ensure_bool(false, result);
 	ensure_int(2, btp_get_num_entries(ctx));
-	ensure(ctx, "key-2", "new-new-value-2");
+	ensure(ctx, "key-2", "new-value-2");
+
+	//
+	// replace same key with a new value again. The replace flag is true, so the value will be replaced.
+	//
+	result = btp_add_property(ctx, "key-2", "replace-new-value-2", true);
+	ensure_bool(false, result);
+	ensure_int(2, btp_get_num_entries(ctx));
+	ensure(ctx, "key-2", "replace-new-value-2");
 
 	btp_iterate_properties(ctx, print_properties);
 
