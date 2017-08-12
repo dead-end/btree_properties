@@ -7,6 +7,16 @@ for the use of the functions:
 tsearch, tfind, tdelete, twalk, tdestroy
 ```
 
+## Why btree?
+The normal way to deal with properties is to use a hash map, which is very
+efficient with lookups. The `<search.h>` library provides the hsearch function
+for this purpose. The problem is, that the `int hcreate(size_t nel)` functon,
+which is used to create a map is called with a size. If the size is too small, 
+the hash map becomes less efficient.
+
+The btree functions are less efficient than the hash map, but do not require a
+size.
+
 ## Context
 To use the library functions an instance of `BTP_ctx` is necessary, 
 which has to be created before the start of the work and which has 
