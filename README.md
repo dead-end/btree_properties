@@ -48,9 +48,9 @@ and the value will be `"value-2"`.
 ```c
 bool result;
 
-bool result-1 = btp_add_property(ctx, "key", "value-1", false);
+result-1 = btp_add_property(ctx, "key", "value-1", false);
 
-bool result-2 = btp_add_property(ctx, "key", "value-2", true);
+result-2 = btp_add_property(ctx, "key", "value-2", true);
 ```
 
 The function `btp_get_property_value` returns the value for a given key. If
